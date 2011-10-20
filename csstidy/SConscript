@@ -1,6 +1,7 @@
 #This file is adapted from http://www.scons.org/wiki/SconstructMultiple
 
 import glob
+import os.path
 
 #get all the build variables we need
 Import('env', 'project', 'mymode', 'debugcflags', 'releasecflags')
@@ -23,10 +24,35 @@ localenv.BuildDir(builddir, ".", duplicate=0)
 #Figure out all the source files
 srclst = map(lambda x: builddir + '/' + x, glob.glob('*.cpp'))
 
+# Find the headers
+inclst = map(lambda x: builddir + '/' + x, glob.glob('*.hpp'))
+
 #If running win32 get special version information from the .rc
 if localenv['PLATFORM'] == 'win32':
     resource = localenv.RES('win32_resource.rc')
     srclst.append(resource)
 
+# Install options
+prefix = ARGUMENTS.get('prefix', '/usr/local')
 
-localenv.Program(targetpath, source=srclst)
+# Binaries
+bins = [
+  localenv.Program(targetpath, source=srclst),
+]
+bindir = os.path.join(prefix, 'bin')
+env.Install(bindir, bins)
+
+# Libraries
+libs = [
+  localenv.StaticLibrary(targetpath, source=srclst),
+  localenv.SharedLibrary(targetpath, source=srclst),
+]
+libdir = os.path.join(prefix, 'lib')
+env.Install(libdir, libs)
+
+# Headers
+incdir = os.path.join(prefix, 'include', 'csstidy')
+env.Install(incdir, inclst)
+
+# Install target
+env.Alias('install', [bindir, libdir, incdir])
